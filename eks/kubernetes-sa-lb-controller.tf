@@ -1,82 +1,43 @@
-resource "aws_iam_role" "lb-controller-role" {
-  name        = "example"
-  description = "EKS service account role"
+resource "aws_iam_policy" "lb-controller-policy" {
+  name        = "AWSLoadBalancerControllerIAMPolicy"
+  policy      = file("iam_policy.json")
+}
+
+resource "aws_iam_role" "lb_controller_role" {
+  name = "AWSLoadBalancerControllerRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = module.eks.oidc-arn
-        }
-        Condition = {
-          StringEquals = {
-            "${module.eks.oidc-url}:sub" = "system:serviceaccount:default:example"
-          }
+    Statement = [{
+      Effect    = "Allow"
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Principal = { Federated = module.eks.oidc-arn }
+
+      Condition = {
+        StringEquals = {
+          "${module.eks.oidc-url}:sub" = "system:serviceaccount:aws-loadbalancer-controller:aws-load-balancer-controller"
         }
       }
-    ]
+    }]
   })
 }
 
-resource "aws_iam_policy" "load_balancer_controller" {
-  name        = "LoadBalancerControllerPolicy"
-  description = "Policy for AWS LoadBalancerController"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "ec2:DescribeAccountAttributes",
-          "ec2:DescribeAddresses",
-          "ec2:DescribeAvailabilityZones",
-          "ec2:DescribeInternetGateways",
-          "ec2:DescribeVpcs",
-          "ec2:DescribeVpcPeeringConnections",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeSecurityGroups",
-          "ec2:DescribeInstances",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DescribeTags",
-          "ec2:GetCoipPoolUsage",
-          "ec2:DescribeCoipPools",
-          "elasticloadbalancing:DescribeLoadBalancers",
-          "elasticloadbalancing:DescribeLoadBalancerAttributes",
-          "elasticloadbalancing:DescribeListeners",
-          "elasticloadbalancing:DescribeListenerCertificates",
-          "elasticloadbalancing:DescribeSSLPolicies",
-          "elasticloadbalancing:DescribeRules",
-          "elasticloadbalancing:DescribeTargetGroups",
-          "elasticloadbalancing:DescribeTargetGroupAttributes",
-          "elasticloadbalancing:DescribeTargetHealth",
-          "elasticloadbalancing:DescribeTags"
-        ]
-        Resource = "*"
-        Effect   = "Allow"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lb-controller-policy-attachment" {
-  role       = aws_iam_role.lb-controller-role.name
-  policy_arn = aws_iam_policy.load_balancer_controller.arn
+resource "aws_iam_role_policy_attachment" "alb_attach" {
+  role       = aws_iam_role.lb_controller_role.name
+  policy_arn = aws_iam_policy.lb-controller-policy.arn
 }
 
 # Create the service account
-resource "kubernetes_service_account" "lb-controller" {
+resource "kubernetes_service_account" "lb_controller" {
   metadata {
     name      = "aws-load-balancer-controller"
-    namespace = "default"
+    namespace = "aws-loadbalancer-controller"
     annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.lb-controller-role.arn
+      "eks.amazonaws.com/role-arn" = aws_iam_role.lb_controller_role.arn
     }
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.lb-controller-policy-attachment,
+    aws_iam_role_policy_attachment.alb_attach,
   ]
 }
