@@ -44,15 +44,15 @@ Before you begin, ensure you have the following installed:
    ```bash
    terraform init
    terraform validate
-   terraform plan -var-file=variables.tfvars
-   terraform apply -auto-approve -var-file=variables.tfvars
+   terraform plan -var-file=../variables.tfvars
+   terraform apply -auto-approve -var-file=../variables.tfvars
 
 3. **Deploy EKS Cluster and Tools: After setting up the VPC and EC2, run the following commands to deploy the EKS cluster and tools**:
    ```bash
    terraform init
    terraform validate
-   terraform plan -var-file=variables.tfvars
-   terraform apply -auto-approve -var-file=variables.tfvars
+   terraform plan -var-file=../variables.tfvars
+   terraform apply -auto-approve -var-file=../variables.tfvars
 
 4. **Access Deployed Resources: Use kubectl to interact with your EKS cluster and the deployed tools (ArgoCD, Prometheus, Grafana, etc.).**
 
